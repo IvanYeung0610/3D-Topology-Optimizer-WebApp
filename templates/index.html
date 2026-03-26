@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Topology Optimizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">HACK3D OPTIMIZATION INTERFACE</p>
+        <h1>3D topology optimization in the browser.</h1>
+        <p>
+          Start from a preset that already converges, or tune the geometry, supports, loads, and optimizer settings yourself.
+        </p>
+      </div>
+      <div class="hero-panel">
+        <p class="eyebrow">Quick Start</p>
+        <label>
+          <span>Default preset</span>
+          <select id="preset-select"></select>
+        </label>
+        <p id="preset-description" class="subtle"></p>
+        <button id="apply-preset" class="primary-button" type="button">Load preset values</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Inputs</p>
+            <h2>Optimization setup</h2>
+          </div>
+          <button id="reset-defaults" class="ghost-button" type="button">Reset default preset</button>
+        </div>
+
+        <form id="optimizer-form" class="form-grid">
+          <section class="card">
+            <div class="card-header">
+              <span class="index">01</span>
+              <div>
+                <h3>Geometry</h3>
+                <p>Domain size and mesh resolution.</p>
+              </div>
+            </div>
+            <div class="fields three-up">
+              <label><span>Lx</span><input name="Lx" type="number" step="0.01" required></label>
+              <label><span>Ly</span><input name="Ly" type="number" step="0.01" required></label>
+              <label><span>Lz</span><input name="Lz" type="number" step="0.01" required></label>
+              <label><span>nx</span><input name="nx" type="number" min="1" step="1" required></label>
+              <label><span>ny</span><input name="ny" type="number" min="1" step="1" required></label>
+              <label><span>nz</span><input name="nz" type="number" min="1" step="1" required></label>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <span class="index">02</span>
+              <div>
+                <h3>Boundary conditions</h3>
+                <p>Add supports by face or by explicit plane position.</p>
+              </div>
+            </div>
+            <div id="supports-list" class="stack"></div>
+            <button id="add-support" class="secondary-button" type="button">Add support</button>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <span class="index">03</span>
+              <div>
+                <h3>Loads</h3>
+                <p>Use distributed face loads or point loads.</p>
+              </div>
+            </div>
+            <div id="loads-list" class="stack"></div>
+            <button id="add-load" class="secondary-button" type="button">Add load</button>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <span class="index">04</span>
+              <div>
+                <h3>Solver settings</h3>
+                <p>Filter radius is in element widths, with a minimum effective value so it remains meaningful across different mesh sizes.</p>
+              </div>
+            </div>
+            <div class="fields three-up">
+              <label><span>Young's modulus (Pa)</span><input name="E_mod" type="number" min="0" step="1000" required></label>
+              <label><span>Poisson ratio</span><input name="nu" type="number" min="-0.49" max="0.49" step="0.01" required></label>
+              <label><span>Iterations</span><input name="n_iterations" type="number" min="1" step="1" required></label>
+              <label><span>Volume fraction</span><input name="volume_fraction" type="number" min="0.01" max="1" step="0.01" required></label>
+              <label><span>Initial density</span><input name="initial_density" type="number" min="0.01" max="1" step="0.01" required></label>
+              <label><span>Penalty</span><input name="penalty" type="number" min="1" step="0.1" required></label>
+              <label><span>Filter radius (elements)</span><input name="filter_radius" type="number" min="1.05" step="0.05" required></label>
+              <label><span>Threshold 1</span><input name="threshold_1" type="number" min="0" max="1" step="0.05" required></label>
+              <label><span>Threshold 2</span><input name="threshold_2" type="number" min="0" max="1" step="0.05" required></label>
+            </div>
+            <div class="fields single">
+              <label><span>Threshold 3</span><input name="threshold_3" type="number" min="0" max="1" step="0.05" required></label>
+            </div>
+          </section>
+
+          <div class="action-row">
+            <button class="primary-button" type="submit">Run optimization</button>
+            <p class="subtle">Preset values are meant to run successfully as-is, but you can still fine tune every field.</p>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel results-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Outputs</p>
+            <h2>Run monitor</h2>
+          </div>
+          <span id="status-pill" class="status idle">Idle</span>
+        </div>
+
+        <div class="card">
+          <div class="progress-row">
+            <div>
+              <p class="eyebrow">Progress</p>
+              <strong id="progress-label">Waiting for a run.</strong>
+            </div>
+            <div id="progress-stats" class="mono subtle"></div>
+          </div>
+          <div class="progress-track">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="panel-header compact">
+            <div>
+              <p class="eyebrow">Live log</p>
+              <h3>Iteration output</h3>
+            </div>
+          </div>
+          <pre id="live-log" class="log-output">No iterations yet.</pre>
+        </div>
+
+        <div id="summary-grid" class="summary-grid"></div>
+        <div id="images-grid" class="images-grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="support-template">
+    <div class="mini-card">
+      <div class="mini-top">
+        <label>
+          <span>Support type</span>
+          <select data-field="mode">
+            <option value="face">Face</option>
+            <option value="position">Plane position</option>
+          </select>
+        </label>
+        <button type="button" class="ghost-button small" data-action="remove">Remove</button>
+      </div>
+      <div class="support-face">
+        <label>
+          <span>Face</span>
+          <select data-field="face">
+            <option value="xmin">X min</option>
+            <option value="xmax">X max</option>
+            <option value="ymin">Y min</option>
+            <option value="ymax">Y max</option>
+            <option value="zmin">Z min</option>
+            <option value="zmax">Z max</option>
+          </select>
+        </label>
+      </div>
+      <div class="support-position two-up">
+        <label>
+          <span>Axis</span>
+          <select data-field="axis">
+            <option value="x">X</option>
+            <option value="y">Y</option>
+            <option value="z">Z</option>
+          </select>
+        </label>
+        <label>
+          <span>Position</span>
+          <input data-field="position" type="number" step="0.01">
+        </label>
+      </div>
+    </div>
+  </template>
+
+  <template id="load-template">
+    <div class="mini-card">
+      <div class="mini-top">
+        <label>
+          <span>Load type</span>
+          <select data-field="type">
+            <option value="distributed">Distributed face load</option>
+            <option value="point">Point load</option>
+          </select>
+        </label>
+        <button type="button" class="ghost-button small" data-action="remove">Remove</button>
+      </div>
+      <div class="load-face">
+        <label>
+          <span>Face</span>
+          <select data-field="face">
+            <option value="xmin">X min</option>
+            <option value="xmax">X max</option>
+            <option value="ymin">Y min</option>
+            <option value="ymax">Y max</option>
+            <option value="zmin">Z min</option>
+            <option value="zmax">Z max</option>
+          </select>
+        </label>
+      </div>
+      <div class="load-point three-up">
+        <label><span>X</span><input data-field="location-x" type="number" step="0.01"></label>
+        <label><span>Y</span><input data-field="location-y" type="number" step="0.01"></label>
+        <label><span>Z</span><input data-field="location-z" type="number" step="0.01"></label>
+      </div>
+      <div class="two-up">
+        <label>
+          <span>Direction</span>
+          <select data-field="direction">
+            <option value="x">X</option>
+            <option value="y">Y</option>
+            <option value="z">Z</option>
+          </select>
+        </label>
+        <label>
+          <span>Magnitude (N)</span>
+          <input data-field="magnitude" type="number" step="100">
+        </label>
+      </div>
+    </div>
+  </template>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
