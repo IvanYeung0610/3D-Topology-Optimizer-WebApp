@@ -6,121 +6,162 @@
   <title>3D Topology Optimizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-  <div class="page">
-    <header class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">HACK3D OPTIMIZATION INTERFACE</p>
-        <h1>3D topology optimization in the browser.</h1>
-        <p>
-          Start from a preset that already converges, or tune the geometry, supports, loads, and optimizer settings yourself.
-        </p>
+  <div class="workspace" data-drawer-open="true">
+    <aside class="config-drawer" id="config-drawer">
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">Topology Workspace</p>
+          <h1>3D Topology Optimizer</h1>
+          <p class="subtle drawer-copy">
+            Configure the optimization inputs, preview the setup live, and launch runs from the same workspace.
+          </p>
+        </div>
+        <button id="drawer-close" class="icon-button" type="button" aria-label="Collapse configuration panel">
+          <span aria-hidden="true">&lsaquo;</span>
+        </button>
       </div>
-      <div class="hero-panel">
-        <p class="eyebrow">Quick Start</p>
+
+      <section class="quick-start card">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Quick Start</p>
+            <h2>Preset configuration</h2>
+          </div>
+        </div>
         <label>
-          <span>Default preset</span>
+          <span>Preset</span>
           <select id="preset-select"></select>
         </label>
         <p id="preset-description" class="subtle"></p>
-        <button id="apply-preset" class="primary-button" type="button">Load preset values</button>
-      </div>
-    </header>
-
-    <main class="layout">
-      <section class="panel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Inputs</p>
-            <h2>Optimization setup</h2>
-          </div>
-          <button id="reset-defaults" class="ghost-button" type="button">Reset default preset</button>
+        <div class="drawer-actions">
+          <button id="apply-preset" class="primary-button" type="button">Load preset values</button>
+          <button id="reset-defaults" class="ghost-button" type="button">Reset defaults</button>
         </div>
-
-        <form id="optimizer-form" class="form-grid">
-          <section class="card">
-            <div class="card-header">
-              <span class="index">01</span>
-              <div>
-                <h3>Geometry</h3>
-                <p>Domain size and mesh resolution.</p>
-              </div>
-            </div>
-            <div class="fields three-up">
-              <label><span>Lx</span><input name="Lx" type="number" step="0.01" required></label>
-              <label><span>Ly</span><input name="Ly" type="number" step="0.01" required></label>
-              <label><span>Lz</span><input name="Lz" type="number" step="0.01" required></label>
-              <label><span>nx</span><input name="nx" type="number" min="1" step="1" required></label>
-              <label><span>ny</span><input name="ny" type="number" min="1" step="1" required></label>
-              <label><span>nz</span><input name="nz" type="number" min="1" step="1" required></label>
-            </div>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <span class="index">02</span>
-              <div>
-                <h3>Boundary conditions</h3>
-                <p>Add supports by face or by explicit plane position.</p>
-              </div>
-            </div>
-            <div id="supports-list" class="stack"></div>
-            <button id="add-support" class="secondary-button" type="button">Add support</button>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <span class="index">03</span>
-              <div>
-                <h3>Loads</h3>
-                <p>Use distributed face loads or point loads.</p>
-              </div>
-            </div>
-            <div id="loads-list" class="stack"></div>
-            <button id="add-load" class="secondary-button" type="button">Add load</button>
-          </section>
-
-          <section class="card">
-            <div class="card-header">
-              <span class="index">04</span>
-              <div>
-                <h3>Solver settings</h3>
-                <p>Filter radius is in element widths, with a minimum effective value so it remains meaningful across different mesh sizes.</p>
-              </div>
-            </div>
-            <div class="fields three-up">
-              <label><span>Young's modulus (Pa)</span><input name="E_mod" type="number" min="0" step="1000" required></label>
-              <label><span>Poisson ratio</span><input name="nu" type="number" min="-0.49" max="0.49" step="0.01" required></label>
-              <label><span>Iterations</span><input name="n_iterations" type="number" min="1" step="1" required></label>
-              <label><span>Volume fraction</span><input name="volume_fraction" type="number" min="0.01" max="1" step="0.01" required></label>
-              <label><span>Initial density</span><input name="initial_density" type="number" min="0.01" max="1" step="0.01" required></label>
-              <label><span>Penalty</span><input name="penalty" type="number" min="1" step="0.1" required></label>
-              <label><span>Filter radius (elements)</span><input name="filter_radius" type="number" min="1.05" step="0.05" required></label>
-              <label><span>Threshold 1</span><input name="threshold_1" type="number" min="0" max="1" step="0.05" required></label>
-              <label><span>Threshold 2</span><input name="threshold_2" type="number" min="0" max="1" step="0.05" required></label>
-            </div>
-            <div class="fields single">
-              <label><span>Threshold 3</span><input name="threshold_3" type="number" min="0" max="1" step="0.05" required></label>
-            </div>
-          </section>
-
-          <div class="action-row">
-            <button class="primary-button" type="submit">Run optimization</button>
-            <p class="subtle">Preset values are meant to run successfully as-is, but you can still fine tune every field.</p>
-          </div>
-        </form>
       </section>
 
-      <section class="panel results-panel">
-        <div class="panel-header">
+      <form id="optimizer-form" class="config-form">
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Inputs</p>
+              <h2>Geometry</h2>
+            </div>
+          </div>
+          <div class="fields three-up">
+            <label><span>Lx</span><input name="Lx" type="number" step="0.01" required></label>
+            <label><span>Ly</span><input name="Ly" type="number" step="0.01" required></label>
+            <label><span>Lz</span><input name="Lz" type="number" step="0.01" required></label>
+            <label><span>nx</span><input name="nx" type="number" min="1" step="1" required></label>
+            <label><span>ny</span><input name="ny" type="number" min="1" step="1" required></label>
+            <label><span>nz</span><input name="nz" type="number" min="1" step="1" required></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Inputs</p>
+              <h2>Boundary conditions</h2>
+              <p class="subtle">Add support planes by face or explicit position.</p>
+            </div>
+          </div>
+          <div id="supports-list" class="stack"></div>
+          <button id="add-support" class="secondary-button" type="button">Add support</button>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Inputs</p>
+              <h2>Loads</h2>
+              <p class="subtle">Use distributed face loads or concentrated point loads.</p>
+            </div>
+          </div>
+          <div id="loads-list" class="stack"></div>
+          <button id="add-load" class="secondary-button" type="button">Add load</button>
+        </section>
+
+        <section class="card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Inputs</p>
+              <h2>Solver settings</h2>
+              <p class="subtle">Filter radius is interpreted in element widths for mesh-consistent behavior.</p>
+            </div>
+          </div>
+          <div class="fields three-up">
+            <label><span>Young's modulus (Pa)</span><input name="E_mod" type="number" min="0" step="1000" required></label>
+            <label><span>Poisson ratio</span><input name="nu" type="number" min="-0.49" max="0.49" step="0.01" required></label>
+            <label><span>Iterations</span><input name="n_iterations" type="number" min="1" step="1" required></label>
+            <label><span>Volume fraction</span><input name="volume_fraction" type="number" min="0.01" max="1" step="0.01" required></label>
+            <label><span>Initial density</span><input name="initial_density" type="number" min="0.01" max="1" step="0.01" required></label>
+            <label><span>Penalty</span><input name="penalty" type="number" min="1" step="0.1" required></label>
+            <label><span>Filter radius</span><input name="filter_radius" type="number" min="1.05" step="0.05" required></label>
+            <label><span>Threshold 1</span><input name="threshold_1" type="number" min="0" max="1" step="0.05" required></label>
+            <label><span>Threshold 2</span><input name="threshold_2" type="number" min="0" max="1" step="0.05" required></label>
+          </div>
+          <div class="fields single">
+            <label><span>Threshold 3</span><input name="threshold_3" type="number" min="0" max="1" step="0.05" required></label>
+          </div>
+        </section>
+
+        <div class="run-toolbar">
+          <button class="primary-button" type="submit">Run optimization</button>
+          <p class="subtle">Preset configurations are intended to converge without additional tuning.</p>
+        </div>
+      </form>
+    </aside>
+
+    <main class="main-workspace">
+      <div class="workspace-toolbar">
+        <button id="drawer-open" class="icon-button drawer-open-button" type="button" aria-label="Open configuration panel">
+          <span aria-hidden="true">&#9776;</span>
+        </button>
+        <div class="toolbar-copy">
+          <p class="eyebrow">Live Model</p>
+          <h2>Configuration preview and run output</h2>
+        </div>
+        <span id="status-pill" class="status idle">Idle</span>
+      </div>
+
+      <section class="workspace-section preview-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Preview</p>
+            <h2>Live setup visualization</h2>
+          </div>
+        </div>
+        <div class="card visualizer-card">
+          <div id="visualizer-summary" class="visualizer-summary">
+            <span class="summary-chip muted">Waiting for geometry inputs.</span>
+          </div>
+          <div class="visualizer-grid">
+            <div class="view-card view-card-wide">
+              <span class="view-title">Top View | X-Y</span>
+              <svg id="viz-top" class="visualizer-canvas" aria-label="Top view visualization"></svg>
+            </div>
+            <div class="view-card">
+              <span class="view-title">Front View | X-Z</span>
+              <svg id="viz-front" class="visualizer-canvas" aria-label="Front view visualization"></svg>
+            </div>
+            <div class="view-card">
+              <span class="view-title">Right View | Y-Z</span>
+              <svg id="viz-right" class="visualizer-canvas" aria-label="Right view visualization"></svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace-section output-section">
+        <div class="section-heading">
           <div>
             <p class="eyebrow">Outputs</p>
             <h2>Run monitor</h2>
           </div>
-          <span id="status-pill" class="status idle">Idle</span>
         </div>
 
         <div class="card">
@@ -137,7 +178,7 @@
         </div>
 
         <div class="card">
-          <div class="panel-header compact">
+          <div class="section-heading compact-heading">
             <div>
               <p class="eyebrow">Live log</p>
               <h3>Iteration output</h3>
