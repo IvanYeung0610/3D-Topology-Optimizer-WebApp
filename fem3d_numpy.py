@@ -275,6 +275,14 @@ class HexFEMSolver3D:
             for dof_offset in range(3):
                 self.fixed_dofs.add(node_id * 3 + dof_offset)
 
+    def fix_face_partial(self, axis=0, coord=0.0, dof_directions=[0], tol=1e-6):
+        """Fix specified DOF directions for all nodes on a face."""
+        mask = np.abs(self.nodes_np[:, axis] - coord) < tol
+        for node_id in np.where(mask)[0]:
+            for dof_direction in dof_directions:
+                if dof_direction in [0, 1, 2]: # Ensure valid direction
+                    self.fixed_dofs.add(node_id * 3 + dof_direction)
+
     def add_distributed_load(
         self, axis=0, coord=1.0, direction=0, total=1e4, tol=1e-6
     ):
