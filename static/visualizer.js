@@ -375,19 +375,19 @@ export class BeamVisualizer {
     const label = this.loadLabel(load, showLabel);
     let out = "";
     if (viewDirection === "+z") {
-      out += line(sx, sy - arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
-    } else if (viewDirection === "-z") {
       out += line(sx, sy + arrowLength, sx, sy, {
         stroke: COLORS.load,
         "stroke-width": 1.8,
         "marker-end": "url(#aL)",
       });
       if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
+    } else if (viewDirection === "-z") {
+      out += line(sx, sy - arrowLength, sx, sy, {
+        stroke: COLORS.load,
+        "stroke-width": 1.8,
+        "marker-end": "url(#aL)",
+      });
+      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
     } else if (viewDirection === "+x") {
       out += line(sx - arrowLength, sy, sx, sy, {
         stroke: COLORS.load,
@@ -403,19 +403,19 @@ export class BeamVisualizer {
       });
       if (label) out += text(sx + arrowLength + 2, sy - 4, label, this.loadTextAttrs());
     } else if (viewDirection === "+y") {
-      out += line(sx, sy - arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
-    } else if (viewDirection === "-y") {
       out += line(sx, sy + arrowLength, sx, sy, {
         stroke: COLORS.load,
         "stroke-width": 1.8,
         "marker-end": "url(#aL)",
       });
       if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
+    } else if (viewDirection === "-y") {
+      out += line(sx, sy - arrowLength, sx, sy, {
+        stroke: COLORS.load,
+        "stroke-width": 1.8,
+        "marker-end": "url(#aL)",
+      });
+      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
     }
     return out;
   }
@@ -470,7 +470,7 @@ export class BeamVisualizer {
     const x1 = x0 + beamWidth;
     const y1 = y0 + beamHeight;
     const mapX = (wx) => x0 + (wx / lx) * beamWidth;
-    const mapZ = (wz) => y0 + (wz / lz) * beamHeight;
+    const mapZ = (wz) => y1 - (wz / lz) * beamHeight;
 
     const loaded = this.buildProjectedSets("X", "Z", this.state.loads, this.resolveLoadNodes);
     const constrained = this.buildProjectedSets("X", "Z", this.state.constraints, this.resolveConstraintNodes);
@@ -526,7 +526,7 @@ export class BeamVisualizer {
     const x1 = x0 + beamWidth;
     const y1 = y0 + beamHeight;
     const mapX = (wx) => x0 + (wx / lx) * beamWidth;
-    const mapY = (wy) => y0 + (wy / ly) * beamHeight;
+    const mapY = (wy) => y1 - (wy / ly) * beamHeight;
 
     const loaded = this.buildProjectedSets("X", "Y", this.state.loads, this.resolveLoadNodes);
     const constrained = this.buildProjectedSets("X", "Y", this.state.constraints, this.resolveConstraintNodes);
@@ -582,7 +582,7 @@ export class BeamVisualizer {
     const x1 = x0 + beamWidth;
     const y1 = y0 + beamHeight;
     const mapY = (wy) => x0 + (wy / ly) * beamWidth;
-    const mapZ = (wz) => y0 + (wz / lz) * beamHeight;
+    const mapZ = (wz) => y1 - (wz / lz) * beamHeight;
 
     const loaded = this.buildProjectedSets("Y", "Z", this.state.loads, this.resolveLoadNodes);
     const constrained = this.buildProjectedSets("Y", "Z", this.state.constraints, this.resolveConstraintNodes);
