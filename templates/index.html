@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TOPO-OPT 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <button id="panelToggle" class="icon-button" type="button" aria-label="Toggle side panel">◀</button>
+        <div class="title-block">
+          <h1>TOPO-OPT 3D</h1>
+          <p>Structural Topology Optimization</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <p id="runError" class="run-error" hidden></p>
+        <span id="statusChip" class="status-chip idle">Idle</span>
+        <button id="runButton" class="run-button" type="button">▶ Run Optimization</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside id="sidePanel" class="side-panel">
+        <div id="geometryWarning" class="warning-banner" hidden>Dimensions changed — loads and constraints have been cleared.</div>
+
+        <details class="control-section" open>
+          <summary>Beam Dimensions</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Length X (mm)</span>
+              <input id="dimX" type="number" min="1" step="1" value="1000">
+            </label>
+            <label class="field">
+              <span>Width Y (mm)</span>
+              <input id="dimY" type="number" min="1" step="1" value="200">
+            </label>
+            <label class="field">
+              <span>Height Z (mm)</span>
+              <input id="dimZ" type="number" min="1" step="1" value="100">
+            </label>
+          </div>
+        </details>
+
+        <details class="control-section" open>
+          <summary>Mesh</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Elements X</span>
+              <input id="meshX" type="number" min="1" step="1" value="20">
+            </label>
+            <label class="field">
+              <span>Elements Y</span>
+              <input id="meshY" type="number" min="1" step="1" value="6">
+            </label>
+            <label class="field">
+              <span>Elements Z</span>
+              <input id="meshZ" type="number" min="1" step="1" value="4">
+            </label>
+            <div id="meshInfo" class="mesh-info"></div>
+          </div>
+        </details>
+
+        <details class="control-section" open>
+          <summary>Loads</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Type</span>
+              <select id="loadType">
+                <option value="point">Point Load</option>
+                <option value="distributed">Distributed Load</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Direction</span>
+              <select id="loadDirection">
+                <option value="+X">+X</option>
+                <option value="-X">-X</option>
+                <option value="+Y">+Y</option>
+                <option value="-Y">-Y</option>
+                <option value="+Z">+Z</option>
+                <option value="-Z" selected>-Z</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Magnitude (N)</span>
+              <input id="loadMagnitude" type="number" min="0" step="1" value="2500">
+            </label>
+
+            <div id="pointLoadFields" class="subsection">
+              <label class="field">
+                <span>X (mm)</span>
+                <select id="loadPointX"></select>
+              </label>
+              <label class="field">
+                <span>Y (mm)</span>
+                <select id="loadPointY"></select>
+              </label>
+              <label class="field">
+                <span>Z (mm)</span>
+                <select id="loadPointZ"></select>
+              </label>
+            </div>
+
+            <div id="distributedLoadFields" class="subsection hidden">
+              <label class="field">
+                <span>Plane</span>
+                <select id="loadPlane">
+                  <option value="XY">XY</option>
+                  <option value="XZ">XZ</option>
+                  <option value="YZ" selected>YZ</option>
+                </select>
+              </label>
+              <label class="field">
+                <span id="loadPlaneCoordLabel">X (mm)</span>
+                <select id="loadPlaneCoord"></select>
+              </label>
+            </div>
+
+            <button id="addLoadButton" class="action-button" type="button">+ Add Load</button>
+            <div id="loadsList" class="item-list"></div>
+          </div>
+        </details>
+
+        <details class="control-section" open>
+          <summary>Constraints</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Type</span>
+              <select id="constraintType">
+                <option value="roller">Roller</option>
+                <option value="guided">Guided</option>
+                <option value="fixed">Fixed</option>
+              </select>
+            </label>
+            <label id="rollerField" class="field">
+              <span>Fixed DOF</span>
+              <select id="constraintFixedDof">
+                <option value="X">X</option>
+                <option value="Y">Y</option>
+                <option value="Z" selected>Z</option>
+              </select>
+            </label>
+            <label id="guidedField" class="field hidden">
+              <span>Free DOF</span>
+              <select id="constraintFreeDof">
+                <option value="X" selected>X</option>
+                <option value="Y">Y</option>
+                <option value="Z">Z</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Plane</span>
+              <select id="constraintPlane">
+                <option value="XY">XY</option>
+                <option value="XZ">XZ</option>
+                <option value="YZ" selected>YZ</option>
+              </select>
+            </label>
+            <label class="field">
+              <span id="constraintPlaneCoordLabel">X (mm)</span>
+              <select id="constraintPlaneCoord"></select>
+            </label>
+            <button id="addConstraintButton" class="action-button" type="button">+ Add Constraint</button>
+            <div id="constraintsList" class="item-list"></div>
+          </div>
+        </details>
+
+        <details class="control-section">
+          <summary>Advanced</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Young's Modulus (Pa)</span>
+              <input id="advE" type="number" min="1" step="1" value="200000000000">
+            </label>
+            <label class="field">
+              <span>Poisson Ratio</span>
+              <input id="advNu" type="number" min="0" max="0.49" step="0.01" value="0.3">
+            </label>
+            <label class="field">
+              <span>Iterations</span>
+              <input id="advIterations" type="number" min="1" step="1" value="100">
+            </label>
+            <label class="field">
+              <span>Volume Fraction</span>
+              <input id="advVolumeFraction" type="number" min="0.01" max="1" step="0.01" value="0.2">
+            </label>
+            <label class="field">
+              <span>Initial Density</span>
+              <input id="advInitialDensity" type="number" min="0.01" max="1" step="0.01" value="0.2">
+            </label>
+            <label class="field">
+              <span>Penalty</span>
+              <input id="advPenalty" type="number" min="1" step="0.1" value="3.0">
+            </label>
+            <label class="field">
+              <span>Filter Radius (m)</span>
+              <input id="advFilterRadius" type="number" min="0.001" step="0.001" value="0.02">
+            </label>
+            <div class="triple-field">
+              <label class="field">
+                <span>Threshold 1</span>
+                <input id="advThreshold1" type="number" min="0" max="1" step="0.05" value="0.1">
+              </label>
+              <label class="field">
+                <span>Threshold 2</span>
+                <input id="advThreshold2" type="number" min="0" max="1" step="0.05" value="0.3">
+              </label>
+              <label class="field">
+                <span>Threshold 3</span>
+                <input id="advThreshold3" type="number" min="0" max="1" step="0.05" value="0.5">
+              </label>
+            </div>
+          </div>
+        </details>
+
+        <details class="control-section" open>
+          <summary>Presets</summary>
+          <div class="section-body">
+            <label class="field">
+              <span>Configuration</span>
+              <select id="presetSelect"></select>
+            </label>
+            <button id="loadPresetButton" class="action-button secondary" type="button">Load Preset</button>
+          </div>
+        </details>
+      </aside>
+
+      <main class="main-column">
+        <section class="surface visualizer-surface">
+          <div class="surface-header">
+            <div>
+              <h2>Beam Visualizer</h2>
+              <p>Orthographic mesh, load, and constraint preview</p>
+            </div>
+          </div>
+          <div id="visualizerGrid" class="visualizer-grid">
+            <div class="view-cell top-view">
+              <span class="view-label">TOP VIEW · X-Y</span>
+              <svg id="svgTop"></svg>
+            </div>
+            <div class="view-spacer">
+              <span>RIGHT</span>
+              <span>Y-Z</span>
+            </div>
+            <div class="view-cell front-view">
+              <span class="view-label">FRONT VIEW · X-Z</span>
+              <svg id="svgFront"></svg>
+            </div>
+            <div class="view-cell right-view">
+              <span class="view-label">RIGHT VIEW · Y-Z</span>
+              <svg id="svgRight"></svg>
+            </div>
+          </div>
+        </section>
+
+        <section class="surface output-surface">
+          <div class="surface-header output-header">
+            <div>
+              <h2>Output</h2>
+              <p>Streaming solve feedback, convergence, and density results</p>
+            </div>
+            <div class="tab-bar">
+              <button class="tab-button active" type="button" data-tab="terminal">Terminal</button>
+              <button class="tab-button" type="button" data-tab="convergence">Convergence</button>
+              <button class="tab-button" type="button" data-tab="results">Results</button>
+            </div>
+          </div>
+
+          <div class="tab-panel active" data-panel="terminal">
+            <div id="terminalOutput" class="terminal-output">
+              <div class="terminal-placeholder">Waiting for run...</div>
+            </div>
+          </div>
+
+          <div class="tab-panel" data-panel="convergence">
+            <div class="chart-grid">
+              <div class="chart-card"><canvas id="complianceChart"></canvas></div>
+              <div class="chart-card"><canvas id="volumeChart"></canvas></div>
+              <div class="chart-card"><canvas id="densityChangeChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="tab-panel" data-panel="results">
+            <div id="resultsGrid" class="results-grid"></div>
+            <div id="resultsSummary" class="results-summary"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+</html>
