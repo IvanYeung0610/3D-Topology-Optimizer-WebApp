@@ -1,4 +1,4 @@
-const PAD = 28;
+const PAD = 60;
 
 const COLORS = {
   beam: "#b0c8e8",
@@ -16,7 +16,7 @@ const HATCH_LEN = 6;
 const HATCH_N = 5;
 const LOAD_LENGTH = {
   point: 36,
-  distributed: 22,
+  distributed: 36,
 };
 
 function el(tag, attrs, inner) {

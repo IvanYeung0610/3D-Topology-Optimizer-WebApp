@@ -391,6 +391,7 @@ button {
   min-height: 0;
   display: grid;
   gap: 1px;
+  overflow: hidden;
   background: var(--border);
   padding: 1px;
   align-content: center;
@@ -407,6 +408,8 @@ button {
 }
 
 .view-cell svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
@@ -414,13 +417,13 @@ button {
 
 .view-label {
   position: absolute;
-  top: 8px;
-  left: 10px;
+  top: 5px;
+  left: 8px;
   z-index: 2;
   color: #255d8d;
-  font-size: 0.72rem;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
 }
 
 .view-spacer {
