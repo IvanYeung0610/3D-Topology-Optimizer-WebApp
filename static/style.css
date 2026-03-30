@@ -351,7 +351,9 @@ button {
   flex-direction: column;
   gap: 16px;
   padding: 16px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .surface {
@@ -369,7 +371,7 @@ button {
 }
 
 .output-surface {
-  flex: 0 0 clamp(320px, 34vh, 420px);
+  flex: 0 0 auto;
   min-height: 320px;
   display: flex;
   flex-direction: column;
