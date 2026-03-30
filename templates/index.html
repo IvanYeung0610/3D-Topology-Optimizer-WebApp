@@ -240,8 +240,14 @@
               <h2>Beam Visualizer</h2>
               <p>Orthographic mesh, load, and constraint preview</p>
             </div>
+            <div class="tab-bar visualizer-tab-bar" aria-label="Beam visualizer views">
+              <button class="tab-button visualizer-tab-button active" type="button" data-visualizer-tab="all">All Views</button>
+              <button class="tab-button visualizer-tab-button" type="button" data-visualizer-tab="top">Top</button>
+              <button class="tab-button visualizer-tab-button" type="button" data-visualizer-tab="front">Front</button>
+              <button class="tab-button visualizer-tab-button" type="button" data-visualizer-tab="right">Right</button>
+            </div>
           </div>
-          <div id="visualizerGrid" class="visualizer-grid">
+          <div id="visualizerGrid" class="visualizer-grid" data-view-mode="all">
             <div class="view-cell top-view">
               <span class="view-label">TOP VIEW · X-Y</span>
               <svg id="svgTop"></svg>

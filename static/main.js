@@ -10,6 +10,7 @@ const MM_PER_M = 1000;
 const state = {
   dimensions: { lx: 1000, ly: 200, lz: 100 },
   mesh: { nx: 20, ny: 6, nz: 4 },
+  viewMode: "all",
   advanced: {
     E_mod: 200e9,
     nu: 0.3,
@@ -90,8 +91,9 @@ const elements = {
   panelToggle: document.getElementById("panelToggle"),
   sidePanel: document.getElementById("sidePanel"),
   geometryWarning: document.getElementById("geometryWarning"),
-  tabButtons: [...document.querySelectorAll(".tab-button")],
-  tabPanels: [...document.querySelectorAll(".tab-panel")],
+  tabButtons: [...document.querySelectorAll(".output-surface .tab-button")],
+  tabPanels: [...document.querySelectorAll(".output-surface .tab-panel")],
+  visualizerTabButtons: [...document.querySelectorAll(".visualizer-tab-button")],
 };
 
 function toMillimeters(valueInMeters) {
@@ -268,6 +270,7 @@ function renderVisualizer() {
     mesh: state.mesh,
     loads: state.loads,
     constraints: state.constraints,
+    viewMode: state.viewMode,
     unitLabel: "mm",
   });
 }
@@ -458,6 +461,14 @@ function openTab(tabName) {
   for (const panel of elements.tabPanels) {
     panel.classList.toggle("active", panel.dataset.panel === tabName);
   }
+}
+
+function openVisualizerTab(viewMode) {
+  state.viewMode = viewMode;
+  for (const button of elements.visualizerTabButtons) {
+    button.classList.toggle("active", button.dataset.visualizerTab === viewMode);
+  }
+  renderVisualizer();
 }
 
 function clearTerminal() {
@@ -780,6 +791,10 @@ function bindEvents() {
 
   for (const button of elements.tabButtons) {
     button.addEventListener("click", () => openTab(button.dataset.tab));
+  }
+
+  for (const button of elements.visualizerTabButtons) {
+    button.addEventListener("click", () => openVisualizerTab(button.dataset.visualizerTab));
   }
 }
 

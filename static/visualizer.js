@@ -30,6 +30,14 @@ function el(tag, attrs, inner) {
 const line = (x1, y1, x2, y2, attrs = {}) => el("line", { x1, y1, x2, y2, ...attrs });
 const rect = (x, y, width, height, attrs = {}) => el("rect", { x, y, width, height, ...attrs });
 const text = (x, y, content, attrs = {}) => el("text", { x, y, ...attrs }, content);
+const polygon = (points, attrs = {}) =>
+  el(
+    "polygon",
+    {
+      points: points.map(([x, y]) => `${x},${y}`).join(" "),
+      ...attrs,
+    }
+  );
 
 function toFixedNumber(value, digits = 4) {
   return Number.parseFloat(Number(value).toFixed(digits));
@@ -61,6 +69,7 @@ function defaultState() {
     mesh: { nx: 20, ny: 6, nz: 4 },
     loads: [],
     constraints: [],
+    viewMode: "all",
     unitLabel: "mm",
   };
 }
@@ -82,9 +91,14 @@ export class BeamVisualizer {
       mesh: { ...state.mesh },
       loads: state.loads.map((load) => ({ ...load })),
       constraints: state.constraints.map((constraint) => ({ ...constraint })),
+      viewMode: state.viewMode || "all",
       unitLabel: state.unitLabel || "mm",
     };
     this.render();
+  }
+
+  getViewMode() {
+    return ["all", "top", "front", "right"].includes(this.state.viewMode) ? this.state.viewMode : "all";
   }
 
   destroy() {
@@ -104,10 +118,30 @@ export class BeamVisualizer {
     const totalWidth = this.grid.clientWidth || 700;
     const totalHeight = this.grid.clientHeight || 500;
     const { lx, ly, lz } = this.state.dimensions;
+    const mode = this.getViewMode();
+    if (mode !== "all") {
+      const singleViewDimensions = {
+        top: { width: lx, height: ly },
+        front: { width: lx, height: lz },
+        right: { width: ly, height: lz },
+      }[mode];
+      const scaleWidth = (totalWidth - 2 * PAD) / singleViewDimensions.width;
+      const scaleHeight = (totalHeight - 2 * PAD) / singleViewDimensions.height;
+      const scale = Math.max(0.005, Math.min(scaleWidth, scaleHeight));
+      return {
+        mode,
+        scale,
+        col0: totalWidth,
+        col1: totalWidth,
+        row0: totalHeight,
+        row1: totalHeight,
+      };
+    }
     const scaleWidth = (totalWidth - 4 * PAD) / (lx + ly);
     const scaleHeight = (totalHeight - 4 * PAD) / (ly + lz);
     const scale = Math.max(0.005, Math.min(scaleWidth, scaleHeight));
     return {
+      mode,
       scale,
       col0: 2 * PAD + lx * scale,
       col1: 2 * PAD + ly * scale,
@@ -117,19 +151,68 @@ export class BeamVisualizer {
   }
 
   applyLayout(layout) {
-    this.grid.style.gridTemplateColumns = `${Math.round(layout.col0)}px ${Math.round(layout.col1)}px`;
-    this.grid.style.gridTemplateRows = `${Math.round(layout.row0)}px ${Math.round(layout.row1)}px`;
+    this.grid.dataset.viewMode = layout.mode;
+    if (layout.mode === "all") {
+      this.grid.style.gridTemplateColumns = `${Math.round(layout.col0)}px ${Math.round(layout.col1)}px`;
+      this.grid.style.gridTemplateRows = `${Math.round(layout.row0)}px ${Math.round(layout.row1)}px`;
+      return;
+    }
+    this.grid.style.gridTemplateColumns = "minmax(0, 1fr)";
+    this.grid.style.gridTemplateRows = "minmax(0, 1fr)";
   }
 
   getDefs() {
-    return `<defs>
-      <marker id="aL" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3z" fill="${COLORS.load}"/>
-      </marker>
-      <marker id="aA" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L8,3z" fill="#8798aa"/>
-      </marker>
-    </defs>`;
+    return "";
+  }
+
+  arrowHead(tipX, tipY, orientation, size, fill) {
+    if (orientation === "right") {
+      return polygon(
+        [
+          [tipX, tipY],
+          [tipX - size, tipY - size * 0.55],
+          [tipX - size, tipY + size * 0.55],
+        ],
+        { fill }
+      );
+    }
+    if (orientation === "left") {
+      return polygon(
+        [
+          [tipX, tipY],
+          [tipX + size, tipY - size * 0.55],
+          [tipX + size, tipY + size * 0.55],
+        ],
+        { fill }
+      );
+    }
+    if (orientation === "up") {
+      return polygon(
+        [
+          [tipX, tipY],
+          [tipX - size * 0.55, tipY + size],
+          [tipX + size * 0.55, tipY + size],
+        ],
+        { fill }
+      );
+    }
+    return polygon(
+      [
+        [tipX, tipY],
+        [tipX - size * 0.55, tipY - size],
+        [tipX + size * 0.55, tipY - size],
+      ],
+      { fill }
+    );
+  }
+
+  arrowLine(x1, y1, x2, y2, orientation, stroke, strokeWidth = 1.8, headSize = 7) {
+    return (
+      line(x1, y1, x2, y2, {
+        stroke,
+        "stroke-width": strokeWidth,
+      }) + this.arrowHead(x2, y2, orientation, headSize, stroke)
+    );
   }
 
   dimLine(x1, y1, x2, y2, label, offset, horizontal) {
@@ -165,21 +248,13 @@ export class BeamVisualizer {
 
   axes(x0, y0, x1, y1, xLabel, yLabel) {
     return (
-      line(x0 - 15, y1 + 20, x1 + 10, y1 + 20, {
-        stroke: "#96a7b8",
-        "stroke-width": 1,
-        "marker-end": "url(#aA)",
-      }) +
+      this.arrowLine(x0 - 15, y1 + 20, x1 + 10, y1 + 20, "right", "#96a7b8", 1, 5) +
       text(x1 + 13, y1 + 23, xLabel, {
         "font-size": 9,
         fill: "#8798aa",
         "font-family": "JetBrains Mono",
       }) +
-      line(x0 - 15, y1 + 20, x0 - 15, y0 - 10, {
-        stroke: "#96a7b8",
-        "stroke-width": 1,
-        "marker-end": "url(#aA)",
-      }) +
+      this.arrowLine(x0 - 15, y1 + 20, x0 - 15, y0 - 10, "up", "#96a7b8", 1, 5) +
       text(x0 - 13, y0 - 13, yLabel, {
         "font-size": 9,
         fill: "#8798aa",
@@ -375,46 +450,22 @@ export class BeamVisualizer {
     const label = this.loadLabel(load, showLabel);
     let out = "";
     if (viewDirection === "+z") {
-      out += line(sx, sy + arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", COLORS.load);
       if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
     } else if (viewDirection === "-z") {
-      out += line(sx, sy - arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", COLORS.load);
       if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
     } else if (viewDirection === "+x") {
-      out += line(sx - arrowLength, sy, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx - arrowLength, sy, sx, sy, "right", COLORS.load);
       if (label) out += text(sx - arrowLength - 2, sy - 4, label, { ...this.loadTextAttrs(), "text-anchor": "end" });
     } else if (viewDirection === "-x") {
-      out += line(sx + arrowLength, sy, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx + arrowLength, sy, sx, sy, "left", COLORS.load);
       if (label) out += text(sx + arrowLength + 2, sy - 4, label, this.loadTextAttrs());
     } else if (viewDirection === "+y") {
-      out += line(sx, sy + arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", COLORS.load);
       if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
     } else if (viewDirection === "-y") {
-      out += line(sx, sy - arrowLength, sx, sy, {
-        stroke: COLORS.load,
-        "stroke-width": 1.8,
-        "marker-end": "url(#aL)",
-      });
+      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", COLORS.load);
       if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
     }
     return out;

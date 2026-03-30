@@ -398,6 +398,10 @@ button {
   justify-content: center;
 }
 
+.visualizer-tab-bar {
+  flex-wrap: wrap;
+}
+
 .view-cell,
 .view-spacer {
   position: relative;
@@ -435,6 +439,18 @@ button {
   color: #6f8296;
   letter-spacing: 0.18em;
   font-size: 0.76rem;
+}
+
+.visualizer-grid[data-view-mode="top"] .front-view,
+.visualizer-grid[data-view-mode="top"] .right-view,
+.visualizer-grid[data-view-mode="top"] .view-spacer,
+.visualizer-grid[data-view-mode="front"] .top-view,
+.visualizer-grid[data-view-mode="front"] .right-view,
+.visualizer-grid[data-view-mode="front"] .view-spacer,
+.visualizer-grid[data-view-mode="right"] .top-view,
+.visualizer-grid[data-view-mode="right"] .front-view,
+.visualizer-grid[data-view-mode="right"] .view-spacer {
+  display: none;
 }
 
 .output-header {
