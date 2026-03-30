@@ -10,7 +10,7 @@ const COLORS = {
   constraint: "#1a7a1a",
 };
 
-const WALL_LEN = 14;
+const WALL_LEN = 10;
 const WALL_OFF = 8;
 const HATCH_LEN = 6;
 const HATCH_N = 5;
