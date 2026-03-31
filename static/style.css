@@ -319,15 +319,11 @@ button {
 }
 
 .item-pill.load strong {
-  background: rgba(204, 34, 34, 0.16);
-  color: #ffc5c5;
-  border-color: var(--load);
+  border-style: solid;
 }
 
 .item-pill.constraint strong {
-  background: rgba(26, 122, 26, 0.16);
-  color: #c8f1c8;
-  border-color: var(--success);
+  border-style: solid;
 }
 
 .delete-button {

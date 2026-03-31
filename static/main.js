@@ -3,6 +3,8 @@ import {
   describeConstraint,
   describeLoad,
   planeCoordinateLabel,
+  LOAD_PALETTE,
+  CONSTRAINT_PALETTE,
 } from "./visualizer.js";
 
 const MM_PER_M = 1000;
@@ -29,7 +31,9 @@ const meshCoordinates = { x: [], y: [], z: [] };
 const presets = [];
 
 let loadId = 0;
+let loadColorIndex = 0;
 let constraintId = 0;
+let constraintColorIndex = 0;
 let geometryWarningTimer = null;
 let geometryFadeTimer = null;
 let meshRequestVersion = 0;
@@ -238,29 +242,33 @@ function updateConstraintTypeUI() {
 
 function renderLists() {
   elements.loadsList.innerHTML = state.loads
-    .map(
-      (load) => `
+    .map((load) => {
+      const palette = LOAD_PALETTE[load.colorIndex % LOAD_PALETTE.length];
+      const badgeStyle = `background:${palette.color};color:${palette.label};border-color:${palette.color};`;
+      return `
         <div class="item-pill load">
           <div class="item-copy">
-            <strong>LOAD</strong>${describeLoad(load, "mm")}
+            <strong style="${badgeStyle}">LOAD</strong>${describeLoad(load, "mm")}
           </div>
           <button class="delete-button" type="button" data-load-delete="${load.id}">x</button>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 
   elements.constraintsList.innerHTML = state.constraints
-    .map(
-      (constraint) => `
+    .map((constraint) => {
+      const palette = CONSTRAINT_PALETTE[constraint.colorIndex % CONSTRAINT_PALETTE.length];
+      const badgeStyle = `background:${palette.color};color:${palette.label};border-color:${palette.color};`;
+      return `
         <div class="item-pill constraint">
           <div class="item-copy">
-            <strong>FIX</strong>${describeConstraint(constraint, "mm")}
+            <strong style="${badgeStyle}">FIX</strong>${describeConstraint(constraint, "mm")}
           </div>
           <button class="delete-button" type="button" data-constraint-delete="${constraint.id}">x</button>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -312,6 +320,7 @@ function addLoad() {
   const type = elements.loadType.value;
   const load = {
     id: loadId++,
+    colorIndex: loadColorIndex++,
     type,
     direction: elements.loadDirection.value,
     magnitude: Math.max(0, numberValue(elements.loadMagnitude, 0)),
@@ -334,6 +343,7 @@ function addConstraint() {
   const type = elements.constraintType.value;
   const constraint = {
     id: constraintId++,
+    colorIndex: constraintColorIndex++,
     type,
     plane: elements.constraintPlane.value,
     planeCoord: numberValue(elements.constraintPlaneCoord, 0),
@@ -367,6 +377,7 @@ function applyPreset(preset) {
   state.loads = preset.loads.map((load) => ({
     ...load,
     id: loadId++,
+    colorIndex: loadColorIndex++,
     px: load.px !== undefined ? toMillimeters(load.px) : undefined,
     py: load.py !== undefined ? toMillimeters(load.py) : undefined,
     pz: load.pz !== undefined ? toMillimeters(load.pz) : undefined,
@@ -375,6 +386,7 @@ function applyPreset(preset) {
   state.constraints = preset.constraints.map((constraint) => ({
     ...constraint,
     id: constraintId++,
+    colorIndex: constraintColorIndex++,
     planeCoord: toMillimeters(constraint.planeCoord),
   }));
   applyStateToForm();

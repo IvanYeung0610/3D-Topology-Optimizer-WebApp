@@ -5,10 +5,33 @@ const COLORS = {
   beamStroke: "#2a5a8a",
   meshEdge: "rgba(42,90,138,0.25)",
   node: "#2a5a8a",
-  nodeLoad: "#cc2222",
-  load: "#cc2222",
-  constraint: "#1a7a1a",
 };
+
+// Five warm colors for loads (sufficiently distinct, legible on dark backgrounds)
+export const LOAD_PALETTE = [
+  { color: "#e03c2a", label: "#fff" },  // red-orange
+  { color: "#e87d1e", label: "#fff" },  // amber-orange
+  { color: "#d4b800", label: "#1a1200" }, // golden yellow — dark text for contrast
+  { color: "#c4453e", label: "#fff" },  // crimson
+  { color: "#b35c00", label: "#fff" },  // burnt sienna
+];
+
+// Five cool colors for constraints (sufficiently distinct)
+export const CONSTRAINT_PALETTE = [
+  { color: "#1a7a9a", label: "#fff" },  // teal
+  { color: "#3a5fc8", label: "#fff" },  // cobalt blue
+  { color: "#2e9e6e", label: "#fff" },  // sea green
+  { color: "#6b3fc8", label: "#fff" },  // violet
+  { color: "#1a6e5a", label: "#fff" },  // deep jade
+];
+
+function loadColor(colorIndex) {
+  return LOAD_PALETTE[(colorIndex ?? 0) % LOAD_PALETTE.length].color;
+}
+
+function constraintColor(colorIndex) {
+  return CONSTRAINT_PALETTE[(colorIndex ?? 0) % CONSTRAINT_PALETTE.length].color;
+}
 
 const WALL_LEN = 10;
 const WALL_OFF = 8;
@@ -263,12 +286,15 @@ export class BeamVisualizer {
     );
   }
 
-  nodeDot(sx, sy, hasLoad, hasConstraint) {
+  // loadFill: color string or null; constraintStroke: color string or null
+  nodeDot(sx, sy, loadFill, constraintStroke) {
+    const hasLoad = loadFill !== null && loadFill !== undefined;
+    const hasConstraint = constraintStroke !== null && constraintStroke !== undefined;
     let out = el("circle", {
       cx: sx,
       cy: sy,
       r: hasLoad ? 4 : 2.5,
-      fill: hasLoad ? COLORS.nodeLoad : COLORS.node,
+      fill: hasLoad ? loadFill : COLORS.node,
       stroke: "#f4fbff",
       "stroke-width": hasLoad ? 1 : 0.8,
     });
@@ -278,48 +304,48 @@ export class BeamVisualizer {
         cy: sy,
         r: 5.2,
         fill: "none",
-        stroke: COLORS.constraint,
+        stroke: constraintStroke,
         "stroke-width": 1.5,
       });
     }
     return out;
   }
 
-  wallHatch(sx, sy, orientation) {
+  wallHatch(sx, sy, orientation, color) {
     let out = "";
     if (orientation === "left") {
       const wallX = sx - WALL_OFF;
       out += line(wallX, sy - WALL_LEN, wallX, sy + WALL_LEN, {
-        stroke: COLORS.constraint,
+        stroke: color,
         "stroke-width": 1.8,
       });
       for (let index = 0; index <= HATCH_N; index += 1) {
         const hatchY = sy - WALL_LEN + (index / HATCH_N) * WALL_LEN * 2;
         out += line(wallX, hatchY, wallX - HATCH_LEN, hatchY + HATCH_LEN, {
-          stroke: COLORS.constraint,
+          stroke: color,
           "stroke-width": 1,
         });
       }
       out += line(sx, sy, wallX, sy, {
-        stroke: COLORS.constraint,
+        stroke: color,
         "stroke-width": 1.2,
         "stroke-dasharray": "2,1.5",
       });
     } else {
       const wallY = sy - WALL_OFF;
       out += line(sx - WALL_LEN, wallY, sx + WALL_LEN, wallY, {
-        stroke: COLORS.constraint,
+        stroke: color,
         "stroke-width": 1.8,
       });
       for (let index = 0; index <= HATCH_N; index += 1) {
         const hatchX = sx - WALL_LEN + (index / HATCH_N) * WALL_LEN * 2;
         out += line(hatchX, wallY, hatchX - HATCH_LEN, wallY - HATCH_LEN, {
-          stroke: COLORS.constraint,
+          stroke: color,
           "stroke-width": 1,
         });
       }
       out += line(sx, sy, sx, wallY, {
-        stroke: COLORS.constraint,
+        stroke: color,
         "stroke-width": 1.2,
         "stroke-dasharray": "2,1.5",
       });
@@ -327,10 +353,10 @@ export class BeamVisualizer {
     return out;
   }
 
-  nodeConstraintSymbol(sx, sy, fixedSet, axisA, axisB) {
+  nodeConstraintSymbol(sx, sy, fixedSet, axisA, axisB, color) {
     let out = "";
-    if (fixedSet.has(axisA)) out += this.wallHatch(sx, sy, "left");
-    if (fixedSet.has(axisB)) out += this.wallHatch(sx, sy, "above");
+    if (fixedSet.has(axisA)) out += this.wallHatch(sx, sy, "left", color);
+    if (fixedSet.has(axisB)) out += this.wallHatch(sx, sy, "above", color);
     return out;
   }
 
@@ -388,6 +414,7 @@ export class BeamVisualizer {
   drawConstraintInView(constraint, axisA, axisB, mapA, mapB) {
     const fixed = this.fixedDofs(constraint);
     if (!fixed.has(axisA) && !fixed.has(axisB)) return "";
+    const color = constraintColor(constraint.colorIndex);
     const seen = new Set();
     let out = "";
     for (const node of this.resolveConstraintNodes(constraint)) {
@@ -396,7 +423,7 @@ export class BeamVisualizer {
       const key = `${worldA},${worldB}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      out += this.nodeConstraintSymbol(mapA(worldA), mapB(worldB), fixed, axisA, axisB);
+      out += this.nodeConstraintSymbol(mapA(worldA), mapB(worldB), fixed, axisA, axisB, color);
     }
     return out;
   }
@@ -424,16 +451,16 @@ export class BeamVisualizer {
     return out;
   }
 
-  drawMeshNodes(horizontalValues, verticalValues, mapH, mapV, loadedSet, constrainedSet) {
+  drawMeshNodes(horizontalValues, verticalValues, mapH, mapV, loadColorMap, constraintColorMap) {
     let out = "";
     for (const horizontalValue of horizontalValues) {
       for (const verticalValue of verticalValues) {
-        const key = `${horizontalValue},${verticalValue}`;
+        const key = `${toFixedNumber(horizontalValue, 6)},${toFixedNumber(verticalValue, 6)}`;
         out += this.nodeDot(
           mapH(horizontalValue),
           mapV(verticalValue),
-          loadedSet.has(key),
-          constrainedSet.has(key)
+          loadColorMap.get(key) ?? null,
+          constraintColorMap.get(key) ?? null
         );
       }
     }
@@ -448,65 +475,72 @@ export class BeamVisualizer {
   nodeArrow(sx, sy, viewDirection, load, showLabel) {
     const arrowLength = LOAD_LENGTH[load.type] || LOAD_LENGTH.point;
     const label = this.loadLabel(load, showLabel);
+    const color = loadColor(load.colorIndex);
     let out = "";
     if (viewDirection === "+z") {
-      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", COLORS.load);
-      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
+      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", color);
+      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs(color));
     } else if (viewDirection === "-z") {
-      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", COLORS.load);
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
+      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", color);
+      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs(color));
     } else if (viewDirection === "+x") {
-      out += this.arrowLine(sx - arrowLength, sy, sx, sy, "right", COLORS.load);
-      if (label) out += text(sx - arrowLength - 2, sy - 4, label, { ...this.loadTextAttrs(), "text-anchor": "end" });
+      out += this.arrowLine(sx - arrowLength, sy, sx, sy, "right", color);
+      if (label) out += text(sx - arrowLength - 2, sy - 4, label, { ...this.loadTextAttrs(color), "text-anchor": "end" });
     } else if (viewDirection === "-x") {
-      out += this.arrowLine(sx + arrowLength, sy, sx, sy, "left", COLORS.load);
-      if (label) out += text(sx + arrowLength + 2, sy - 4, label, this.loadTextAttrs());
+      out += this.arrowLine(sx + arrowLength, sy, sx, sy, "left", color);
+      if (label) out += text(sx + arrowLength + 2, sy - 4, label, this.loadTextAttrs(color));
     } else if (viewDirection === "+y") {
-      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", COLORS.load);
-      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs());
+      out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", color);
+      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs(color));
     } else if (viewDirection === "-y") {
-      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", COLORS.load);
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs());
+      out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", color);
+      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs(color));
     }
     return out;
   }
 
-  loadTextAttrs() {
+  loadTextAttrs(color) {
     return {
       "font-size": 9,
-      fill: COLORS.load,
+      fill: color,
       "font-family": "JetBrains Mono",
     };
   }
 
   outOfPlane(sx, sy, comingOut, load, showLabel) {
+    const color = loadColor(load.colorIndex);
     let out = el("circle", {
       cx: sx,
       cy: sy,
       r: 5,
       fill: "none",
-      stroke: COLORS.load,
+      stroke: color,
       "stroke-width": 1.5,
     });
     if (comingOut) {
-      out += el("circle", { cx: sx, cy: sy, r: 2, fill: COLORS.load });
+      out += el("circle", { cx: sx, cy: sy, r: 2, fill: color });
     } else {
       out +=
-        line(sx - 3.5, sy - 3.5, sx + 3.5, sy + 3.5, { stroke: COLORS.load, "stroke-width": 1.5 }) +
-        line(sx + 3.5, sy - 3.5, sx - 3.5, sy + 3.5, { stroke: COLORS.load, "stroke-width": 1.5 });
+        line(sx - 3.5, sy - 3.5, sx + 3.5, sy + 3.5, { stroke: color, "stroke-width": 1.5 }) +
+        line(sx + 3.5, sy - 3.5, sx - 3.5, sy + 3.5, { stroke: color, "stroke-width": 1.5 });
     }
-    if (showLabel) out += text(sx + 8, sy + 4, `${load.magnitude}N`, this.loadTextAttrs());
+    if (showLabel) out += text(sx + 8, sy + 4, `${load.magnitude}N`, this.loadTextAttrs(color));
     return out;
   }
 
-  buildProjectedSets(axisA, axisB, sourceItems, resolver) {
-    const projected = new Set();
+  // Returns a Map<key, color> — first item wins if multiple overlap
+  buildProjectedColorMap(axisA, axisB, sourceItems, resolver, colorFn) {
+    const map = new Map();
     for (const item of sourceItems) {
+      const color = colorFn(item.colorIndex);
       for (const node of resolver.call(this, item)) {
-        projected.add(`${node[`w${axisA.toLowerCase()}`]},${node[`w${axisB.toLowerCase()}`]}`);
+        const a = toFixedNumber(node[`w${axisA.toLowerCase()}`], 6);
+        const b = toFixedNumber(node[`w${axisB.toLowerCase()}`], 6);
+        const key = `${a},${b}`;
+        if (!map.has(key)) map.set(key, color);
       }
     }
-    return projected;
+    return map;
   }
 
   renderFront(layout) {
@@ -523,8 +557,8 @@ export class BeamVisualizer {
     const mapX = (wx) => x0 + (wx / lx) * beamWidth;
     const mapZ = (wz) => y1 - (wz / lz) * beamHeight;
 
-    const loaded = this.buildProjectedSets("X", "Z", this.state.loads, this.resolveLoadNodes);
-    const constrained = this.buildProjectedSets("X", "Z", this.state.constraints, this.resolveConstraintNodes);
+    const loaded = this.buildProjectedColorMap("X", "Z", this.state.loads, this.resolveLoadNodes, loadColor);
+    const constrained = this.buildProjectedColorMap("X", "Z", this.state.constraints, this.resolveConstraintNodes, constraintColor);
 
     let out = this.getDefs();
     out += this.axes(x0, y0, x1, y1, "X", "Z");
@@ -579,8 +613,8 @@ export class BeamVisualizer {
     const mapX = (wx) => x0 + (wx / lx) * beamWidth;
     const mapY = (wy) => y1 - (wy / ly) * beamHeight;
 
-    const loaded = this.buildProjectedSets("X", "Y", this.state.loads, this.resolveLoadNodes);
-    const constrained = this.buildProjectedSets("X", "Y", this.state.constraints, this.resolveConstraintNodes);
+    const loaded = this.buildProjectedColorMap("X", "Y", this.state.loads, this.resolveLoadNodes, loadColor);
+    const constrained = this.buildProjectedColorMap("X", "Y", this.state.constraints, this.resolveConstraintNodes, constraintColor);
 
     let out = this.getDefs();
     out += this.axes(x0, y0, x1, y1, "X", "Y");
@@ -635,8 +669,8 @@ export class BeamVisualizer {
     const mapY = (wy) => x0 + (wy / ly) * beamWidth;
     const mapZ = (wz) => y1 - (wz / lz) * beamHeight;
 
-    const loaded = this.buildProjectedSets("Y", "Z", this.state.loads, this.resolveLoadNodes);
-    const constrained = this.buildProjectedSets("Y", "Z", this.state.constraints, this.resolveConstraintNodes);
+    const loaded = this.buildProjectedColorMap("Y", "Z", this.state.loads, this.resolveLoadNodes, loadColor);
+    const constrained = this.buildProjectedColorMap("Y", "Z", this.state.constraints, this.resolveConstraintNodes, constraintColor);
 
     let out = this.getDefs();
     out += this.axes(x0, y0, x1, y1, "Y", "Z");
