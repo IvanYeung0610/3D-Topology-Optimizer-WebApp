@@ -7,22 +7,30 @@ const COLORS = {
   node: "#2a5a8a",
 };
 
-// Five warm colors for loads (sufficiently distinct, legible on dark backgrounds)
 export const LOAD_PALETTE = [
-  { color: "#e03c2a", label: "#fff" },  // red-orange
-  { color: "#e87d1e", label: "#fff" },  // amber-orange
-  { color: "#d4b800", label: "#1a1200" }, // golden yellow — dark text for contrast
-  { color: "#c4453e", label: "#fff" },  // crimson
-  { color: "#b35c00", label: "#fff" },  // burnt sienna
+  { color: "#b50212", label: "#fff" },
+  { color: "#79061c", label: "#fff" },
+  { color: "#b73d41", label: "#fff" },
+  { color: "#e0322e", label: "#fff" },
+  { color: "#ff982b", label: "#fff" },
+  { color: "#c95b0c", label: "#fff" },
+  { color: "#570303", label: "#fff" },
+  { color: "#f1d476", label: "#1a1200" },
+  { color: "#623904", label: "#fff" },
+  { color: "#fff704", label: "#1a1200" },
 ];
 
-// Five cool colors for constraints (sufficiently distinct)
 export const CONSTRAINT_PALETTE = [
-  { color: "#1a7a9a", label: "#fff" },  // teal
-  { color: "#3a5fc8", label: "#fff" },  // cobalt blue
-  { color: "#2e9e6e", label: "#fff" },  // sea green
-  { color: "#6b3fc8", label: "#fff" },  // violet
-  { color: "#1a6e5a", label: "#fff" },  // deep jade
+  { color: "#3925b9", label: "#fff" },
+  { color: "#2e9391", label: "#fff" },
+  { color: "#014e71", label: "#fff" },
+  { color: "#0d3e6c", label: "#fff" },
+  { color: "#0d7699", label: "#fff" },
+  { color: "#2d5b6e", label: "#fff" },
+  { color: "#7422d1", label: "#fff" },
+  { color: "#03253b", label: "#fff" },
+  { color: "#ac57fc", label: "#fff" },
+  { color: "#d081ef", label: "#fff" },
 ];
 
 function loadColor(colorIndex) {
@@ -137,18 +145,40 @@ export class BeamVisualizer {
     return { xs, ys, zs };
   }
 
+  // Estimate pixel width of a string rendered at the dim-line font (9px monospace).
+  // JetBrains Mono at size 9 has ~5.5px per character.
+  estimateLabelWidth(str) {
+    return str.length * 6;
+  }
+
+  // Compute the right-side padding needed for a vertical dim label.
+  // The anchor sits at beam-right-edge + dimOffset + gap; text grows rightward.
+  padRight(labelStr) {
+    const DIM_OFFSET = 22;
+    const GAP = 5;
+    return DIM_OFFSET + GAP + this.estimateLabelWidth(labelStr) + 6; // +6 safety margin
+  }
+
   computeLayout() {
     const totalWidth = this.grid.clientWidth || 700;
     const totalHeight = this.grid.clientHeight || 500;
     const { lx, ly, lz } = this.state.dimensions;
+    const unitLabel = this.state.unitLabel || "mm";
     const mode = this.getViewMode();
+
+    const lyLabel = `${toFixedNumber(ly, 2)} ${unitLabel}`;
+    const lzLabel = `${toFixedNumber(lz, 2)} ${unitLabel}`;
+
     if (mode !== "all") {
       const singleViewDimensions = {
         top: { width: lx, height: ly },
         front: { width: lx, height: lz },
         right: { width: ly, height: lz },
       }[mode];
-      const scaleWidth = (totalWidth - 2 * PAD) / singleViewDimensions.width;
+      // Right-side label for each single view
+      const rightLabel = { top: lyLabel, front: lzLabel, right: lzLabel }[mode];
+      const padR = this.padRight(rightLabel);
+      const scaleWidth = (totalWidth - PAD - padR) / singleViewDimensions.width;
       const scaleHeight = (totalHeight - 2 * PAD) / singleViewDimensions.height;
       const scale = Math.max(0.005, Math.min(scaleWidth, scaleHeight));
       return {
@@ -160,14 +190,24 @@ export class BeamVisualizer {
         row1: totalHeight,
       };
     }
-    const scaleWidth = (totalWidth - 4 * PAD) / (lx + ly);
+
+    // All-view mode: col0 right label is max(lz, ly); col1 right label is lz
+    const padRCol0 = this.padRight(
+      this.estimateLabelWidth(lzLabel) >= this.estimateLabelWidth(lyLabel) ? lzLabel : lyLabel
+    );
+    const padRCol1 = this.padRight(lzLabel);
+
+    // Use the larger of the two right-pads as a conservative shared scale budget
+    const padRMax = Math.max(padRCol0, padRCol1);
+    const scaleWidth = (totalWidth - 2 * PAD - PAD - padRMax) / (lx + ly);
     const scaleHeight = (totalHeight - 4 * PAD) / (ly + lz);
     const scale = Math.max(0.005, Math.min(scaleWidth, scaleHeight));
+
     return {
       mode,
       scale,
-      col0: 2 * PAD + lx * scale,
-      col1: 2 * PAD + ly * scale,
+      col0: PAD + lx * scale + padRCol0,
+      col1: PAD + ly * scale + padRCol1,
       row0: 2 * PAD + ly * scale,
       row1: 2 * PAD + lz * scale,
     };
@@ -249,7 +289,7 @@ export class BeamVisualizer {
       labelY = y1 + dy + (dy > 0 ? 10 : -3);
     } else {
       dx = offset;
-      labelX = x1 + dx + (dx > 0 ? 13 : -13);
+      labelX = x1 + dx + (dx > 0 ? 3 : -3);
       labelY = (y1 + y2) / 2 + 4;
     }
     return (
@@ -263,7 +303,7 @@ export class BeamVisualizer {
       text(labelX, labelY, label, {
         "font-size": 9,
         fill: "#7b8d9f",
-        "text-anchor": "middle",
+        "text-anchor": horizontal ? "middle" : (dx > 0 ? "start" : "end"),
         "font-family": "JetBrains Mono",
       })
     );
@@ -271,14 +311,14 @@ export class BeamVisualizer {
 
   axes(x0, y0, x1, y1, xLabel, yLabel) {
     return (
-      this.arrowLine(x0 - 15, y1 + 20, x1 + 10, y1 + 20, "right", "#96a7b8", 1, 5) +
-      text(x1 + 13, y1 + 23, xLabel, {
+      this.arrowLine(x0 - 20, y1 + 20, x1 + 20, y1 + 20, "right", "#96a7b8", 1, 5) +
+      text(x1 + 23, y1 + 23, xLabel, {
         "font-size": 9,
         fill: "#8798aa",
         "font-family": "JetBrains Mono",
       }) +
-      this.arrowLine(x0 - 15, y1 + 20, x0 - 15, y0 - 10, "up", "#96a7b8", 1, 5) +
-      text(x0 - 13, y0 - 13, yLabel, {
+      this.arrowLine(x0 - 20, y1 + 20, x0 - 20, y0 - 20, "up", "#96a7b8", 1, 5) +
+      text(x0 - 22, y0 - 23, yLabel, {
         "font-size": 9,
         fill: "#8798aa",
         "font-family": "JetBrains Mono",
@@ -467,44 +507,24 @@ export class BeamVisualizer {
     return out;
   }
 
-  loadLabel(load, showLabel) {
-    if (!showLabel) return "";
-    return load.type === "distributed" ? `${load.magnitude}N` : `${load.magnitude}N`;
-  }
-
   nodeArrow(sx, sy, viewDirection, load, showLabel) {
     const arrowLength = LOAD_LENGTH[load.type] || LOAD_LENGTH.point;
-    const label = this.loadLabel(load, showLabel);
     const color = loadColor(load.colorIndex);
     let out = "";
     if (viewDirection === "+z") {
       out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", color);
-      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs(color));
     } else if (viewDirection === "-z") {
       out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", color);
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs(color));
     } else if (viewDirection === "+x") {
       out += this.arrowLine(sx - arrowLength, sy, sx, sy, "right", color);
-      if (label) out += text(sx - arrowLength - 2, sy - 4, label, { ...this.loadTextAttrs(color), "text-anchor": "end" });
     } else if (viewDirection === "-x") {
       out += this.arrowLine(sx + arrowLength, sy, sx, sy, "left", color);
-      if (label) out += text(sx + arrowLength + 2, sy - 4, label, this.loadTextAttrs(color));
     } else if (viewDirection === "+y") {
       out += this.arrowLine(sx, sy + arrowLength, sx, sy, "up", color);
-      if (label) out += text(sx + 4, sy + arrowLength + 10, label, this.loadTextAttrs(color));
     } else if (viewDirection === "-y") {
       out += this.arrowLine(sx, sy - arrowLength, sx, sy, "down", color);
-      if (label) out += text(sx + 4, sy - arrowLength - 4, label, this.loadTextAttrs(color));
     }
     return out;
-  }
-
-  loadTextAttrs(color) {
-    return {
-      "font-size": 9,
-      fill: color,
-      "font-family": "JetBrains Mono",
-    };
   }
 
   outOfPlane(sx, sy, comingOut, load, showLabel) {
@@ -524,7 +544,6 @@ export class BeamVisualizer {
         line(sx - 3.5, sy - 3.5, sx + 3.5, sy + 3.5, { stroke: color, "stroke-width": 1.5 }) +
         line(sx + 3.5, sy - 3.5, sx - 3.5, sy + 3.5, { stroke: color, "stroke-width": 1.5 });
     }
-    if (showLabel) out += text(sx + 8, sy + 4, `${load.magnitude}N`, this.loadTextAttrs(color));
     return out;
   }
 
