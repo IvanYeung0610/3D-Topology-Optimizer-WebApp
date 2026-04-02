@@ -235,7 +235,3 @@ The app was smoke-tested with:
   - `/api/presets`
   - `/api/validate_mesh`
   - `/api/run` SSE streaming
-
-## License
-
-Add your preferred license here if this project will be shared publicly.
