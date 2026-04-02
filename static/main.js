@@ -814,6 +814,7 @@ async function init() {
   visualizer = new BeamVisualizer({
     grid: document.getElementById("visualizerGrid"),
     svgTop: document.getElementById("svgTop"),
+    svgIso: document.getElementById("svgIso"),
     svgFront: document.getElementById("svgFront"),
     svgRight: document.getElementById("svgRight"),
   });

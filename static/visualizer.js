@@ -61,6 +61,7 @@ function el(tag, attrs, inner) {
 const line = (x1, y1, x2, y2, attrs = {}) => el("line", { x1, y1, x2, y2, ...attrs });
 const rect = (x, y, width, height, attrs = {}) => el("rect", { x, y, width, height, ...attrs });
 const text = (x, y, content, attrs = {}) => el("text", { x, y, ...attrs }, content);
+const path = (d, attrs = {}) => el("path", { d, ...attrs });
 const polygon = (points, attrs = {}) =>
   el(
     "polygon",
@@ -106,9 +107,10 @@ function defaultState() {
 }
 
 export class BeamVisualizer {
-  constructor({ grid, svgTop, svgFront, svgRight }) {
+  constructor({ grid, svgTop, svgIso, svgFront, svgRight }) {
     this.grid = grid;
     this.svgTop = svgTop;
+    this.svgIso = svgIso;
     this.svgFront = svgFront;
     this.svgRight = svgRight;
     this.state = defaultState();
@@ -321,6 +323,39 @@ export class BeamVisualizer {
       text(x0 - 22, y0 - 23, yLabel, {
         "font-size": 9,
         fill: "#8798aa",
+        "font-family": "JetBrains Mono",
+      })
+    );
+  }
+
+  vectorArrow(x0, y0, dx, dy, label, stroke = "#8798aa", strokeWidth = 1.1, headSize = 5) {
+    const length = Math.hypot(dx, dy) || 1;
+    const ux = dx / length;
+    const uy = dy / length;
+    const tipX = x0 + dx;
+    const tipY = y0 + dy;
+    const baseX = tipX - ux * headSize;
+    const baseY = tipY - uy * headSize;
+    const perpX = -uy;
+    const perpY = ux;
+    const wing = headSize * 0.55;
+
+    return (
+      line(x0, y0, baseX, baseY, {
+        stroke,
+        "stroke-width": strokeWidth,
+      }) +
+      polygon(
+        [
+          [tipX, tipY],
+          [baseX + perpX * wing, baseY + perpY * wing],
+          [baseX - perpX * wing, baseY - perpY * wing],
+        ],
+        { fill: stroke }
+      ) +
+      text(tipX + perpX * 6 + ux * 4, tipY + perpY * 6 + uy * 4, label, {
+        "font-size": 9,
+        fill: stroke,
         "font-family": "JetBrains Mono",
       })
     );
@@ -562,6 +597,250 @@ export class BeamVisualizer {
     return map;
   }
 
+  renderIsometric(layout) {
+    if (!this.svgIso) return;
+
+    const { lx, ly, lz } = this.state.dimensions;
+    const { xs, ys, zs } = this.getNodeCoords();
+    const width = layout.col1;
+    const height = layout.row0;
+
+    const labelInset = 24;
+    const padX = 16;
+    const padY = 16;
+    const ISO_X = Math.cos(Math.PI / 6);
+    const ISO_Y = 0.5;
+    const rawProject = (wx, wy, wz) => ({
+      x: ISO_X * (wx + wy),
+      y: ISO_Y * (wx - wy) - wz,
+    });
+
+    const corners = [
+      rawProject(0, 0, 0),
+      rawProject(lx, 0, 0),
+      rawProject(0, ly, 0),
+      rawProject(0, 0, lz),
+      rawProject(lx, ly, 0),
+      rawProject(lx, 0, lz),
+      rawProject(0, ly, lz),
+      rawProject(lx, ly, lz),
+    ];
+    const minRawX = Math.min(...corners.map((point) => point.x));
+    const maxRawX = Math.max(...corners.map((point) => point.x));
+    const minRawY = Math.min(...corners.map((point) => point.y));
+    const maxRawY = Math.max(...corners.map((point) => point.y));
+    const rawWidth = Math.max(1, maxRawX - minRawX);
+    const rawHeight = Math.max(1, maxRawY - minRawY);
+    const scale = Math.max(
+      0.005,
+      Math.min((width - 2 * padX) / rawWidth, (height - labelInset - 2 * padY) / rawHeight)
+    );
+    const offsetX = (width - rawWidth * scale) / 2 - minRawX * scale;
+    const offsetY = labelInset + (height - labelInset - rawHeight * scale) / 2 - minRawY * scale;
+    const project = (wx, wy, wz) => {
+      const point = rawProject(wx, wy, wz);
+      return {
+        x: offsetX + point.x * scale,
+        y: offsetY + point.y * scale,
+      };
+    };
+
+    const faces = [
+      {
+        key: "front",
+        visible: true,
+        fill: "rgba(176, 200, 232, 0.72)",
+        points: [
+          [0, 0, 0],
+          [lx, 0, 0],
+          [lx, 0, lz],
+          [0, 0, lz],
+        ],
+        fixedAxis: "y",
+        fixedValue: 0,
+        axisA: "x",
+        axisB: "z",
+        valuesA: xs,
+        valuesB: zs,
+      },
+      {
+        key: "right",
+        visible: true,
+        fill: "rgba(154, 184, 219, 0.8)",
+        points: [
+          [lx, 0, 0],
+          [lx, ly, 0],
+          [lx, ly, lz],
+          [lx, 0, lz],
+        ],
+        fixedAxis: "x",
+        fixedValue: lx,
+        axisA: "y",
+        axisB: "z",
+        valuesA: ys,
+        valuesB: zs,
+      },
+      {
+        key: "top",
+        visible: true,
+        fill: "rgba(214, 229, 245, 0.84)",
+        points: [
+          [0, 0, lz],
+          [lx, 0, lz],
+          [lx, ly, lz],
+          [0, ly, lz],
+        ],
+        fixedAxis: "z",
+        fixedValue: lz,
+        axisA: "x",
+        axisB: "y",
+        valuesA: xs,
+        valuesB: ys,
+      },
+      {
+        key: "left",
+        visible: false,
+        points: [
+          [0, 0, 0],
+          [0, ly, 0],
+          [0, ly, lz],
+          [0, 0, lz],
+        ],
+        fixedAxis: "x",
+        fixedValue: 0,
+        axisA: "y",
+        axisB: "z",
+        valuesA: ys,
+        valuesB: zs,
+      },
+      {
+        key: "back",
+        visible: false,
+        points: [
+          [0, ly, 0],
+          [lx, ly, 0],
+          [lx, ly, lz],
+          [0, ly, lz],
+        ],
+        fixedAxis: "y",
+        fixedValue: ly,
+        axisA: "x",
+        axisB: "z",
+        valuesA: xs,
+        valuesB: zs,
+      },
+      {
+        key: "bottom",
+        visible: false,
+        points: [
+          [0, 0, 0],
+          [lx, 0, 0],
+          [lx, ly, 0],
+          [0, ly, 0],
+        ],
+        fixedAxis: "z",
+        fixedValue: 0,
+        axisA: "x",
+        axisB: "y",
+        valuesA: xs,
+        valuesB: ys,
+      },
+    ];
+
+    const segmentMap = new Map();
+    const addSegment = (start, end, visible) => {
+      const startKey = start.join(",");
+      const endKey = end.join(",");
+      const key = startKey < endKey ? `${startKey}|${endKey}` : `${endKey}|${startKey}`;
+      const existing = segmentMap.get(key);
+      if (existing) {
+        existing.visible = existing.visible || visible;
+        return;
+      }
+      segmentMap.set(key, { start, end, visible });
+    };
+    const pointForFace = (face, valueA, valueB) => {
+      const point = { x: 0, y: 0, z: 0 };
+      point[face.fixedAxis] = face.fixedValue;
+      point[face.axisA] = valueA;
+      point[face.axisB] = valueB;
+      return [point.x, point.y, point.z];
+    };
+
+    for (const face of faces) {
+      for (const valueB of face.valuesB) {
+        addSegment(
+          pointForFace(face, face.valuesA[0], valueB),
+          pointForFace(face, face.valuesA[face.valuesA.length - 1], valueB),
+          face.visible
+        );
+      }
+      for (const valueA of face.valuesA) {
+        addSegment(
+          pointForFace(face, valueA, face.valuesB[0]),
+          pointForFace(face, valueA, face.valuesB[face.valuesB.length - 1]),
+          face.visible
+        );
+      }
+    }
+
+    const segmentMarkup = (segment, dashed) => {
+      const start = project(...segment.start);
+      const end = project(...segment.end);
+      const attrs = {
+        stroke: dashed ? "rgba(42,90,138,0.5)" : COLORS.beamStroke,
+        "stroke-width": dashed ? 0.95 : 1.15,
+        "stroke-linecap": "round",
+      };
+      if (dashed) attrs["stroke-dasharray"] = "5,3";
+      return line(start.x, start.y, end.x, end.y, attrs);
+    };
+
+    let out = this.getDefs();
+
+    for (const segment of segmentMap.values()) {
+      if (!segment.visible) out += segmentMarkup(segment, true);
+    }
+
+    for (const face of faces) {
+      if (!face.visible) continue;
+      out += polygon(face.points.map((point) => {
+        const projected = project(...point);
+        return [projected.x, projected.y];
+      }), {
+        fill: face.fill,
+        stroke: "none",
+      });
+    }
+
+    for (const segment of segmentMap.values()) {
+      if (segment.visible) out += segmentMarkup(segment, false);
+    }
+
+    const origin = project(0, 0, 0);
+    const axisLength = Math.max(18, Math.min(34, Math.min(width, height) * 0.12));
+    const axisVector = (dx, dy) => {
+      const length = Math.hypot(dx, dy) || 1;
+      return {
+        dx: (dx / length) * axisLength,
+        dy: (dy / length) * axisLength,
+      };
+    };
+    const xAxis = axisVector(ISO_X, ISO_Y);
+    const yAxis = axisVector(ISO_X, -ISO_Y);
+    const zAxis = axisVector(0, -1);
+    out += this.vectorArrow(origin.x, origin.y, xAxis.dx, xAxis.dy, "X");
+    out += this.vectorArrow(origin.x, origin.y, yAxis.dx, yAxis.dy, "Y");
+    out += this.vectorArrow(origin.x, origin.y, zAxis.dx, zAxis.dy, "Z");
+    out += path(`M ${origin.x - 2.5} ${origin.y} a 2.5 2.5 0 1 0 5 0 a 2.5 2.5 0 1 0 -5 0`, {
+      fill: "#255d8d",
+      opacity: 0.95,
+    });
+
+    this.svgIso.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    this.svgIso.innerHTML = out;
+  }
+
   renderFront(layout) {
     const { lx, lz } = this.state.dimensions;
     const { xs, zs } = this.getNodeCoords();
@@ -741,6 +1020,12 @@ export class BeamVisualizer {
     this.renderTop(layout);
     this.renderFront(layout);
     this.renderRight(layout);
+    if (layout.mode === "all") {
+      this.renderIsometric(layout);
+    } else if (this.svgIso) {
+      this.svgIso.innerHTML = "";
+      this.svgIso.setAttribute("viewBox", "0 0 1 1");
+    }
   }
 }
 

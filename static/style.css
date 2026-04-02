@@ -448,12 +448,15 @@ button {
 
 .visualizer-grid[data-view-mode="top"] .front-view,
 .visualizer-grid[data-view-mode="top"] .right-view,
+.visualizer-grid[data-view-mode="top"] .isometric-view,
 .visualizer-grid[data-view-mode="top"] .view-spacer,
 .visualizer-grid[data-view-mode="front"] .top-view,
 .visualizer-grid[data-view-mode="front"] .right-view,
+.visualizer-grid[data-view-mode="front"] .isometric-view,
 .visualizer-grid[data-view-mode="front"] .view-spacer,
 .visualizer-grid[data-view-mode="right"] .top-view,
 .visualizer-grid[data-view-mode="right"] .front-view,
+.visualizer-grid[data-view-mode="right"] .isometric-view,
 .visualizer-grid[data-view-mode="right"] .view-spacer {
   display: none;
 }
