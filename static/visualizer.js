@@ -1,10 +1,10 @@
 const PAD = 60;
 
 const COLORS = {
-  beam: "#b0c8e8",
-  beamStroke: "#2a5a8a",
-  meshEdge: "rgba(42,90,138,0.25)",
-  node: "#2a5a8a",
+  beam: "#dce8f5",
+  beamStroke: "#7d97b3",
+  meshEdge: "rgba(125,151,179,0.3)",
+  node: "#5f7f9e",
 };
 
 export const LOAD_PALETTE = [
@@ -306,7 +306,7 @@ export class BeamVisualizer {
         "font-size": 9,
         fill: "#7b8d9f",
         "text-anchor": horizontal ? "middle" : (dx > 0 ? "start" : "end"),
-        "font-family": "JetBrains Mono",
+        "font-family": "Segoe UI",
       })
     );
   }
@@ -317,13 +317,13 @@ export class BeamVisualizer {
       text(x1 + 23, y1 + 23, xLabel, {
         "font-size": 9,
         fill: "#8798aa",
-        "font-family": "JetBrains Mono",
+        "font-family": "Segoe UI",
       }) +
       this.arrowLine(x0 - 20, y1 + 20, x0 - 20, y0 - 20, "up", "#96a7b8", 1, 5) +
       text(x0 - 22, y0 - 23, yLabel, {
         "font-size": 9,
         fill: "#8798aa",
-        "font-family": "JetBrains Mono",
+        "font-family": "Segoe UI",
       })
     );
   }
@@ -356,7 +356,7 @@ export class BeamVisualizer {
       text(tipX + perpX * 6 + ux * 4, tipY + perpY * 6 + uy * 4, label, {
         "font-size": 9,
         fill: stroke,
-        "font-family": "JetBrains Mono",
+        "font-family": "Segoe UI",
       })
     );
   }
@@ -649,7 +649,7 @@ export class BeamVisualizer {
       {
         key: "front",
         visible: true,
-        fill: "rgba(176, 200, 232, 0.72)",
+        fill: "rgba(220, 232, 245, 0.85)",
         points: [
           [0, 0, 0],
           [lx, 0, 0],
@@ -666,7 +666,7 @@ export class BeamVisualizer {
       {
         key: "right",
         visible: true,
-        fill: "rgba(154, 184, 219, 0.8)",
+        fill: "rgba(202, 220, 239, 0.88)",
         points: [
           [lx, 0, 0],
           [lx, ly, 0],
@@ -683,7 +683,7 @@ export class BeamVisualizer {
       {
         key: "top",
         visible: true,
-        fill: "rgba(214, 229, 245, 0.84)",
+        fill: "rgba(239, 245, 252, 0.96)",
         points: [
           [0, 0, lz],
           [lx, 0, lz],
@@ -833,7 +833,7 @@ export class BeamVisualizer {
     out += this.vectorArrow(origin.x, origin.y, yAxis.dx, yAxis.dy, "Y");
     out += this.vectorArrow(origin.x, origin.y, zAxis.dx, zAxis.dy, "Z");
     out += path(`M ${origin.x - 2.5} ${origin.y} a 2.5 2.5 0 1 0 5 0 a 2.5 2.5 0 1 0 -5 0`, {
-      fill: "#255d8d",
+      fill: "#4d6f90",
       opacity: 0.95,
     });
 

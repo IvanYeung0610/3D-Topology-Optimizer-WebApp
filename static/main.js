@@ -443,7 +443,7 @@ function setStatus(text, kind) {
 }
 
 function setRunButtonState(running) {
-  elements.runButton.textContent = running ? "■ Stop" : "▶ Run Optimization";
+  elements.runButton.textContent = running ? "Stop" : "Run Optimization";
   elements.runButton.classList.toggle("stop", running);
 }
 
@@ -519,19 +519,19 @@ function createChart(canvasId, label, color, logarithmic = false) {
       maintainAspectRatio: false,
       animation: false,
       plugins: {
-        legend: { labels: { color: "#c8d8e8" } },
+        legend: { labels: { color: "#495057" } },
       },
       scales: {
         x: {
-          title: { display: true, text: "Iteration", color: "#8ca2b8" },
-          ticks: { color: "#8ca2b8" },
-          grid: { color: "rgba(140,162,184,0.14)" },
+          title: { display: true, text: "Iteration", color: "#6c757d" },
+          ticks: { color: "#6c757d" },
+          grid: { color: "rgba(108,117,125,0.14)" },
         },
         y: {
           type: logarithmic ? "logarithmic" : "linear",
-          title: { display: true, text: label, color: "#8ca2b8" },
-          ticks: { color: "#8ca2b8" },
-          grid: { color: "rgba(140,162,184,0.14)" },
+          title: { display: true, text: label, color: "#6c757d" },
+          ticks: { color: "#6c757d" },
+          grid: { color: "rgba(108,117,125,0.14)" },
         },
       },
     },
@@ -797,7 +797,7 @@ function bindEvents() {
 
   elements.panelToggle.addEventListener("click", () => {
     const collapsed = elements.sidePanel.classList.toggle("collapsed");
-    elements.panelToggle.textContent = collapsed ? "▶" : "◀";
+    elements.panelToggle.textContent = collapsed ? "›" : "‹";
     setTimeout(() => renderVisualizer(), 240);
   });
 
@@ -819,9 +819,9 @@ async function init() {
     svgRight: document.getElementById("svgRight"),
   });
 
-  complianceChart = createChart("complianceChart", "Compliance", "#4a9edd", true);
-  volumeChart = createChart("volumeChart", "Volume Fraction", "#56c271", false);
-  densityChangeChart = createChart("densityChangeChart", "Max Density Change", "#f57f63", true);
+  complianceChart = createChart("complianceChart", "Compliance", "#0d6efd", true);
+  volumeChart = createChart("volumeChart", "Volume Fraction", "#198754", false);
+  densityChangeChart = createChart("densityChangeChart", "Max Density Change", "#fd7e14", true);
 
   bindEvents();
   registerListDelegation();

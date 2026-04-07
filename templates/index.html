@@ -4,9 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TOPO-OPT 3D</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
 </head>
@@ -14,22 +11,22 @@
   <div class="app-shell">
     <header class="app-header">
       <div class="header-left">
-        <button id="panelToggle" class="icon-button" type="button" aria-label="Toggle side panel">◀</button>
+        <button id="panelToggle" class="icon-button" type="button" aria-label="Toggle side panel">&lsaquo;</button>
         <div class="title-block">
           <h1>Hack3D</h1>
-          <p>3D SIMP Topology Optimization</p>
+          <p>3D topology optimization workspace</p>
         </div>
       </div>
       <div class="header-right">
         <p id="runError" class="run-error" hidden></p>
         <span id="statusChip" class="status-chip idle">Idle</span>
-        <button id="runButton" class="run-button" type="button">▶ Run Optimization</button>
+        <button id="runButton" class="run-button" type="button">Run Optimization</button>
       </div>
     </header>
 
     <div class="workspace">
       <aside id="sidePanel" class="side-panel">
-        <div id="geometryWarning" class="warning-banner" hidden>Dimensions changed — loads and constraints have been cleared.</div>
+        <div id="geometryWarning" class="warning-banner" hidden>Dimensions changed. Loads and constraints have been cleared.</div>
 
         <details class="control-section" open>
           <summary>Beam Dimensions</summary>
@@ -124,7 +121,7 @@
               </label>
             </div>
 
-            <button id="addLoadButton" class="action-button" type="button">+ Add Load</button>
+            <button id="addLoadButton" class="action-button" type="button">Add Load</button>
             <div id="loadsList" class="item-list"></div>
           </div>
         </details>
@@ -168,7 +165,7 @@
               <span id="constraintPlaneCoordLabel">X (mm)</span>
               <select id="constraintPlaneCoord"></select>
             </label>
-            <button id="addConstraintButton" class="action-button" type="button">+ Add Constraint</button>
+            <button id="addConstraintButton" class="action-button" type="button">Add Constraint</button>
             <div id="constraintsList" class="item-list"></div>
           </div>
         </details>
