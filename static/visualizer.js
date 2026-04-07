@@ -328,7 +328,7 @@ export class BeamVisualizer {
     );
   }
 
-  vectorArrow(x0, y0, dx, dy, label, stroke = "#8798aa", strokeWidth = 1.1, headSize = 5) {
+  vectorArrow(x0, y0, dx, dy, label, stroke = "#8798aa", strokeWidth = 1.1, headSize = 5, options = {}) {
     const length = Math.hypot(dx, dy) || 1;
     const ux = dx / length;
     const uy = dy / length;
@@ -339,12 +339,34 @@ export class BeamVisualizer {
     const perpX = -uy;
     const perpY = ux;
     const wing = headSize * 0.55;
+    const solidTailLength = Math.max(0, options.solidTailLength ?? length);
+    const shaftLength = Math.max(0, length - headSize);
+    const hiddenLength = Math.max(0, shaftLength - solidTailLength);
+    const hiddenEndX = x0 + ux * hiddenLength;
+    const hiddenEndY = y0 + uy * hiddenLength;
+    const labelAlong = options.labelAlong ?? 4;
+    const labelNormal = options.labelNormal ?? 6;
+    const labelX = tipX + ux * labelAlong + perpX * labelNormal;
+    const labelY = tipY + uy * labelAlong + perpY * labelNormal;
 
-    return (
-      line(x0, y0, baseX, baseY, {
+    let out = "";
+    if (hiddenLength > 0) {
+      out += line(x0, y0, hiddenEndX, hiddenEndY, {
         stroke,
         "stroke-width": strokeWidth,
-      }) +
+        "stroke-dasharray": options.hiddenDasharray || "1.4,4.2",
+        "stroke-linecap": "round",
+        opacity: options.hiddenOpacity ?? 0.9,
+      });
+    }
+    out += line(hiddenEndX, hiddenEndY, baseX, baseY, {
+      stroke,
+      "stroke-width": strokeWidth,
+      "stroke-linecap": "round",
+    });
+
+    return (
+      out +
       polygon(
         [
           [tipX, tipY],
@@ -353,10 +375,11 @@ export class BeamVisualizer {
         ],
         { fill: stroke }
       ) +
-      text(tipX + perpX * 6 + ux * 4, tipY + perpY * 6 + uy * 4, label, {
+      text(labelX, labelY, label, {
         "font-size": 9,
         fill: stroke,
         "font-family": "JetBrains Mono",
+        ...(options.labelAttrs || {}),
       })
     );
   }
@@ -818,20 +841,31 @@ export class BeamVisualizer {
     }
 
     const origin = project(0, 0, 0);
-    const axisLength = Math.max(18, Math.min(34, Math.min(width, height) * 0.12));
-    const axisVector = (dx, dy) => {
-      const length = Math.hypot(dx, dy) || 1;
+    const axisVectorFromWorld = (wx, wy, wz) => {
+      const tip = project(wx, wy, wz);
       return {
-        dx: (dx / length) * axisLength,
-        dy: (dy / length) * axisLength,
+        dx: tip.x - origin.x,
+        dy: tip.y - origin.y,
       };
     };
-    const xAxis = axisVector(ISO_X, ISO_Y);
-    const yAxis = axisVector(ISO_X, -ISO_Y);
-    const zAxis = axisVector(0, -1);
-    out += this.vectorArrow(origin.x, origin.y, xAxis.dx, xAxis.dy, "X");
-    out += this.vectorArrow(origin.x, origin.y, yAxis.dx, yAxis.dy, "Y");
-    out += this.vectorArrow(origin.x, origin.y, zAxis.dx, zAxis.dy, "Z");
+    const xAxis = axisVectorFromWorld(lx + 50, 0, 0);
+    const yAxis = axisVectorFromWorld(0, ly + 50 + lz, 0);
+    const zAxis = axisVectorFromWorld(0, 0, lz + 50);
+    out += this.vectorArrow(origin.x, origin.y, xAxis.dx, xAxis.dy, "X", "#8798aa", 1.1, 5, {
+      labelAlong: 3.5,
+      labelNormal: 3,
+    });
+    out += this.vectorArrow(origin.x, origin.y, yAxis.dx, yAxis.dy, "Y", "#8798aa", 1.1, 5, {
+      solidTailLength: 5,
+      hiddenDasharray: "1.5,4",
+      hiddenOpacity: 0.95,
+      labelAlong: 0.5,
+      labelNormal: 1,
+    });
+    out += this.vectorArrow(origin.x, origin.y, zAxis.dx, zAxis.dy, "Z", "#8798aa", 1.1, 5, {
+      labelAlong: 2,
+      labelNormal: -2.5,
+    });
     out += path(`M ${origin.x - 2.5} ${origin.y} a 2.5 2.5 0 1 0 5 0 a 2.5 2.5 0 1 0 -5 0`, {
       fill: "#255d8d",
       opacity: 0.95,
